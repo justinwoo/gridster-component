@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <script src="build/react-with-addons.js"></script>
+  <script src="build/JSXTransformer.js"></script>
+  <script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+  <script src="build/jquery.gridster.js"></script>
+
+  <style type="text/css">
+    .item {
+      background-color: pink;
+      display: block; 
+      position: absolute;
+    }
+    body {
+      height: 900px;
+    }
+  </style>
+</head>
+
+<body>
+  
+   <script type="text/jsx">
+  /** @jsx React.DOM */
+
+  var TestItem = React.createClass({
+    getInitialState: function() {
+      return {count: 0};
+    },
+    componentDidMount: function() {
+      this.interval = setInterval(this.handleTick, 1000);
+    },
+    componentWillUnmount: function() {
+      clearInterval(this.interval);
+    },
+    handleTick: function() {
+      this.setState({count: this.state.count + 1});
+    },
+    render: function() {
+      return <span>{this.props.children}{': '}{this.state.count}</span>;
+    }
+  });
+
+  var Grid = React.createClass({
+
+    render: function() {
+      return this.transferPropsTo(<ul />);
+    },
+
+    componentDidMount: function() {
+      // initialize gridster
+      var gridster = $(this.getDOMNode()).gridster({
+        widget_margins: [10, 10],
+        widget_base_dimensions: [140, 140]
+      }).data('gridster');
+
+      this.props.children.map(function(child, i) {
+        var attributes = child.props.attributes;
+        var key = "child" + child.props.key;
+        gridster.add_widget(
+          '<li class="item" id={key}></li>'.replace('{key}', key), 
+          attributes.width,
+          attributes.height,
+          attributes.col,
+          attributes.row
+        );
+        React.renderComponent(child, document.getElementById(key));
+      });
+      this.setState({gridster: gridster});
+    },
+
+    componentDidUpdate: function(prevProps, prevState) {
+      var gridster = this.state.gridster;
+      var uniques = this.props.children.filter(function(newChild) {
+        for (var index in prevProps.children) {
+          var oldChild = prevProps.children[index];
+          if (oldChild.props.key === newChild.props.key) {
+            return false;
+          }
+        }
+        return true;
+      });
+
+      uniques.map(function(child) {
+        var attributes = child.props.attributes;
+        var key = "child" + child.props.key;
+        gridster.add_widget(
+          '<li class="item" id={key}></li>'.replace('{key}', key), 
+          attributes.width,
+          attributes.height,
+          attributes.col,
+          attributes.row
+        );
+        React.renderComponent(child, document.getElementById(key));
+      });
+    }
+
+  });
+
+  var App = React.createClass({
+    getInitialState: function() {
+      return {
+        items: [{
+          key: 'test0',
+          width: 1,
+          height: 1,
+          col: 1,
+          row: 1
+        }, {
+          key: 'test1',
+          width: 1,
+          height: 1,
+          col: 2,
+          row: 1
+        }, {
+          key: 'test2',
+          width: 1,
+          height: 1,
+          col: 3,
+          row: 1
+        }],
+        nextCol: 4,
+        nextRow: 1,
+        nextKey: 3
+      };
+    },
+
+    handleAdd: function() {
+
+      var nextCol = this.state.nextCol;
+      var nextRow = this.state.nextRow;
+
+      var newItem = {
+        key: 'test' + this.state.nextKey,
+        width: 1,
+        height: 1,
+        col: nextCol,
+        row: nextRow
+      }
+
+      var newItems = React.addons.update(this.state.items, {
+        $push: [newItem]
+      });
+
+      if (nextCol % 6 === 0) {
+        nextCol = 1;
+        nextRow++;
+      } else {
+        nextCol++;
+      }
+
+      this.setState({
+        items: newItems,
+        nextKey: this.state.nextKey + 1,
+        nextCol: nextCol,
+        nextRow: nextRow
+      });
+    },
+
+    render: function() {
+      var items = this.state.items.map(function(item) {
+        return (
+          <div key={item.key}
+              attributes={item}>
+            <TestItem >{item.key}</TestItem>
+          </div>
+        );
+      });
+      return (
+        <div>
+          <h1>React + Gridster</h1>
+          <p>Next Col: {this.state.nextCol}</p>
+          <p>Next Row: {this.state.nextRow}</p>
+          <p>Items: {JSON.stringify(this.state.items)}</p>
+          <p><button onClick={this.handleAdd}>Add an item</button></p>
+          <Grid>
+            {items}
+          </Grid>
+        </div>
+      );
+    }
+  });
+
+  React.renderComponent(<App />, document.body);
+
+  </script>
+
+</body>
+
+</html>
